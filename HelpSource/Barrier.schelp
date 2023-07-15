@@ -1,0 +1,58 @@
+CLASS:: Barrier
+summary:: A synchronisation barrier. Will will wait until n number of threads have finished.
+categories:: Scheduling
+related:: Classes/CondVar
+
+DESCRIPTION::
+An synchronisation barrier. Will will wait until n number of threads have finished.
+Barriers are not reuseable.
+
+SECTION:: Usage
+
+There are two ways to use Barrier, forkAll, or forkN.
+
+code::
+r = Routine {
+	var barrier = Barrier.forkAll(
+		{1.0.rand.wait; \a.postln},
+		{1.0.rand.wait; \b.postln},
+		{1.0.rand.wait; \c.postln},
+		{1.0.rand.wait; \d.postln}
+	);
+
+	\waiting.postln;
+	barrier.wait;
+	\done.postln
+};
+
+r.play;
+
+r = Routine {
+	var func = {|n| 1.0.rand.wait; n.postln};
+	var barrier = Barrier.forkN(f, 10 );
+
+	\waiting.postln;
+	barrier.wait;
+	\done.postln
+};
+
+r.play
+::
+
+
+CLASSMETHODS::
+
+METHOD::forkAll
+
+argument:: ...arrayOfFuncs
+An series of functions to run.
+One function per argument.
+
+
+METHOD::forkN
+argument:: func
+A function that will be duplicated and run in parralel N times.
+Recieves the instance count as the function argument.
+
+argument:: n
+The number of times to duplicate the function.

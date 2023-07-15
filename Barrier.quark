@@ -1,0 +1,9 @@
+(
+          \name: "Barrier",
+       \summary: "An synchronisation barrier. Will will wait until n number of threads have finished.",
+        \author: "Jordan Henderson",
+     \copyright: "Jordan Henderson 2023",
+       \license: "GPL",
+       \version: "0.1",
+        \url: "https://github.com/JordanHendersonMusic/JX-supercollider",
+)

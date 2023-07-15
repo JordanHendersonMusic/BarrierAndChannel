@@ -8,9 +8,6 @@ Barrier {
 			CondVar()
 		);
 
-		arrayOfFuncs.postln;
-
-
 		arrayOfFuncs.do({|f|
 			fork {
 				f.();
@@ -23,9 +20,9 @@ Barrier {
 	*forkN { |func, n|
 		var self = super.newCopyArgs(
 			n.asInteger,
-			n.asInteger,
 			CondVar()
 		);
+
 		n.do({|count|
 			fork {
 				func.(count);

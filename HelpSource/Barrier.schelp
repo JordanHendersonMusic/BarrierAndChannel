@@ -118,12 +118,13 @@ If this isn't called in a thread, and the value has not been completed then an e
 If the value has been completed, it will always return.
 
 
-METHOD:: isFinished
-Returns a boolean, true if all routines have finsished, false if not.
-
-METHOD:: isPlaying
-Returns a boolean, true if routines are still playing, false if not.
-
+METHOD:: loopWhileExecuting
+ARGUMENT:: func
+Loops this function while the process is still executing.
+NOTE::
+The passed function MUST wait, or it will be called very quickly, crashing the interpreter.
+There is no  way for Barrier to check this for you.
+::
 EXAMPLES::
 
 Below is an interactive example. Run it while reading the code and following the post window.
@@ -137,7 +138,8 @@ s.waitForBoot {
 	SynthDef(\bleep, {
 		var env = Env.perc(\atk.kr(0.01), \rel.kr(1)).ar(doneAction: 2);
 		var sig = SinOsc.ar(\freq.kr(220));
-		Out.ar(\out.kr(0), sig * env * \amp.kr(0.2)!2);
+		var stereo = Pan2.ar(sig, Rand(-1.0, 1.0)) * env * \amp.kr(0.2);
+		Out.ar(\out.kr(0), stereo);
 	}).add;
 
 	s.sync;
@@ -188,12 +190,13 @@ s.waitForBoot {
 			var freq = (step + root).midicps;
 
 			format("main voice at %", freq).postln;
-			Synth(\bleep, [\freq, freq, \rel, delta]);
+			Synth(\bleep, [\freq, freq, \rel, delta * 3]);
 			if(count != 4, {delta.wait});
 		};
 
 		"staring other voices again".warn;
-		~othervoices2 = Barrier.doNTimes(20, { |n|
+		"but main voice does something while the other voices are playing".warn;
+		Barrier.doNTimes(20, { |n|
 			25.do{ |count|
 				var delta = 3.0.rand + 0.3;
 				var step = Scale.major.semitones.choose;
@@ -209,11 +212,10 @@ s.waitForBoot {
 				]);
 				if(count != 24, {delta.wait});
 			}
-		});
-
-		"main voice does this while the other voices are playing".warn;
-		while({~othervoices2.isPlaying}, {
-			var delta = 3.0.rand + 3;
+		})
+		.loopWhileExecuting({
+			// makes low thumps
+			var delta = 3.0.rand + 1;
 			var step = Scale.major.semitones.choose;
 			var root = 40;
 			var freq = (step + root).midicps;

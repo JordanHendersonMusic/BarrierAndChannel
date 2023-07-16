@@ -1,7 +1,8 @@
 Barrier {
 	var countDown;
 	var condVar;
-	var <isFinished;  // only public member
+	var isFinished;
+
 	// only used for collect case
 	var expects_value;
 	var held_value;
@@ -48,7 +49,10 @@ Barrier {
 		)
 	}
 
-	isPlaying { ^this.isFinished.not }
+	loopWhileExecuting {|func|
+		while({isFinished.not}, func);
+		^this;
+	}
 
 	// private:
 	prTryWait {

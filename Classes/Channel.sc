@@ -54,7 +54,10 @@ Channel {
 		try {
 			condVar.wait{array.size > 0}
 		} { |er|
-			if((er.class == PrimitiveFailedError) && (er.failedPrimitiveName == '_RoutineYield'),
+			if(
+				(er.class == PrimitiveFailedError)
+				&& (er.failedPrimitiveName == '_RoutineYield' ),
+
 				{  "Channel.wait must be called inside a Routine".throw	},
 				{er.throw} // something else has happened, perhaps impossible?
 			);

@@ -14,6 +14,12 @@ Channel {
 		condVar.signalAll;
 	}
 
+	insertResultOf {|function|
+		fork {
+			this.insert(function.());
+		}
+	}
+
 	extract {
 		^if(array.size > 0,
 			{

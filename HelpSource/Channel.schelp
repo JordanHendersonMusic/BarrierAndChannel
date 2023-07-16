@@ -56,6 +56,14 @@ METHOD:: insertAll
 Inserts all value into the channel, seperate each value with a comma.
 ARGUMENT:: ...v
 
+METHOD:: insertResultOf
+Insert the result of the function into the channel.
+The function may 'wait' or otherwise halt the execution.
+ARGUMENT:: function
+
+INSTANCEMETHODS::
+
+
 METHOD:: extract
 Extracts the oldest value from the Channel
 

@@ -194,7 +194,7 @@ s.waitForBoot {
 
 		"staring other voices again".warn;
 		~othervoices2 = Barrier.doNTimes(20, { |n|
-			25.do{
+			25.do{ |count|
 				var delta = 3.0.rand + 0.3;
 				var step = Scale.major.semitones.choose;
 				var root = 63;

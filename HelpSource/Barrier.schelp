@@ -121,6 +121,7 @@ If the value has been completed, it will always return.
 METHOD:: loopWhileExecuting
 ARGUMENT:: func
 Loops this function while the process is still executing.
+The function is run in the current thread.
 NOTE::
 The passed function MUST wait, or it will be called very quickly, crashing the interpreter.
 There is no  way for Barrier to check this for you.

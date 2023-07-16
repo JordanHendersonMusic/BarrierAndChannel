@@ -1,7 +1,7 @@
 Barrier {
 	var countDown;
 	var condVar;
-	var <is_finished;  // only public member
+	var <isFinished;  // only public member
 	// only used for collect case
 	var expects_value;
 	var held_value;
@@ -10,7 +10,7 @@ Barrier {
 		^super.newCopyArgs(
 			seriesOfFuncs.size, // countDown
 			CondVar(), // condVar
-			false, // is_finished
+			false, // isFinished
 			false, //  expects_value
 			nil // held_value
 		)
@@ -21,7 +21,7 @@ Barrier {
 		^super.newCopyArgs(
 			seriesOfFuncs.size, // countDown
 			CondVar(), // condVar
-			false, // is_finished
+			false, // isFinished
 			true, //  expects_value
 			nil.dup(seriesOfFuncs.size) // held_value
 		)
@@ -48,10 +48,12 @@ Barrier {
 		)
 	}
 
+	isPlaying { ^this.isFinished.not }
+
 	// private:
 	prTryWait {
 		^try {
-			condVar.wait{is_finished} // normal path
+			condVar.wait{isFinished} // normal path
 		} {|er|
 			if((er.class == PrimitiveFailedError) && (er.failedPrimitiveName == '_RoutineYield'),
 				{  "Barrier.wait must be called inside a Routine/Thread".throw	},
@@ -63,9 +65,9 @@ Barrier {
 
 	prTryValue {
 		^try {
-			if(is_finished,
+			if(isFinished,
 				{held_value}, // already computed
-				{ condVar.wait{is_finished}; held_value } // not finished yet, try waiting.
+				{ condVar.wait{isFinished}; held_value } // not finished yet, try waiting.
 			)
 		}
 		{ |er|
@@ -82,7 +84,7 @@ Barrier {
 	prRelease {
 		countDown = countDown - 1;
 		condVar.signalOne;
-		if(countDown <= 0, {is_finished = true })
+		if(countDown <= 0, {isFinished = true })
 	}
 
 	pr_collect { |funcs, clump|

@@ -1,0 +1,72 @@
+CLASS:: Channel
+summary:: A synchronisation method with two ends, an insert and extract.
+categories:: Scheduling
+related:: Classes/Barrier
+
+DESCRIPTION::
+An synchronisation channel.
+There are two ends to a channel, an insertion end, and an extraction end.
+This is used to have some number of threads producing values, and some number consuming values.
+The values are extracted in the order they were inserted, so the oldest value is extracted first.
+
+SECTION:: Usage
+Channel has very few methods. 'insert' and 'extract' are the most important.
+Below, '~inserter' is creating values  and '~extractor' is extracting them.
+
+code::
+~channel = Channel();
+
+~inserter = Routine.run{
+	loop  {
+		var r = 5.0.rand;
+		r.wait;
+		\inserting.postln;
+		~channel.insert( r );
+	}
+};
+
+~extractor = Routine.run {
+	loop {
+		\waiting.postln;
+		2.wait;
+		~channel.extract.postln;
+	}
+};
+::
+
+
+Alternatively, '~extract' may '.extractAll', which returns an array of values.
+Or may wish to check whether the channel '.has_value' and do something if not.
+
+
+
+CLASSMETHODS::
+
+METHOD::new
+Channel must be made and shared between Routines.
+
+
+INSTANCEMETHODS::
+METHOD:: insert
+Insert value into the channel.
+ARGUMENT:: v
+
+
+METHOD:: insertAll
+Inserts all value into the channel, seperate each value with a comma.
+ARGUMENT:: ...v
+
+METHOD:: extract
+Extracts the oldest value from the Channel
+
+METHOD:: extractAll
+Extracts all the values from the Channel, returning an array of values.
+
+METHOD:: has_value
+Returns true or false depending on whether a value may be extracted.
+
+
+
+
+
+

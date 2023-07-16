@@ -1,7 +1,7 @@
 CLASS:: Barrier
 summary:: A synchronisation barrier. Will wait until n number of threads have finished.
 categories:: Scheduling
-related:: Classes/CondVar
+related:: Classes/Channel
 
 DESCRIPTION::
 An synchronisation barrier.
@@ -118,8 +118,119 @@ If this isn't called in a thread, and the value has not been completed then an e
 If the value has been completed, it will always return.
 
 
+METHOD:: isFinished
+Returns a boolean, true if all routines have finsished, false if not.
+
+METHOD:: isPlaying
+Returns a boolean, true if routines are still playing, false if not.
+
+EXAMPLES::
+
+Below is an interactive example. Run it while reading the code and following the post window.
+In short, the main voice plays 5 notes, then 10 other voices play while the main voice is quite,
+then the main voice plays 5 more notes, then while 20 other voices play, the main voice also plays something.
+
+code::
+(
+s.waitForBoot {
+
+	SynthDef(\bleep, {
+		var env = Env.perc(\atk.kr(0.01), \rel.kr(1)).ar(doneAction: 2);
+		var sig = SinOsc.ar(\freq.kr(220));
+		Out.ar(\out.kr(0), sig * env * \amp.kr(0.2)!2);
+	}).add;
+
+	s.sync;
+	s.scope;
+
+	Routine.run {
+		"staring main voice".warn;
+		5.do{ |count|
+			var delta = 3.0.rand + 0.1;
+			var step = Scale.major.semitones.choose;
+			var root = 60;
+			var freq = (step + root).midicps;
+
+			format("main voice at %", freq).postln;
+			Synth(\bleep, [\freq, freq, \rel, delta]);
+			if(count != 4, {delta.wait});
+		};
+
+		"staring other voices".warn;
+		~othervoices1 = Barrier.doNTimes(10, {|n|
+			5.do{ |count|
+				var delta = 6.0.rand + 3;
+				var step = Scale.major.semitones.choose;
+				var root = 55;
+				var freq = (step + root).midicps;
+
+				format("other voice % at %", n, freq).postln;
+				Synth(\bleep, [
+					\freq, freq,
+					\atk, delta/2,
+					\rel, delta/2,
+					\amp, 0.1
+				]);
+				// do not wait for last note to finish.
+				if(count != 4, {delta.wait});
+			}
+		});
+
+		"main voice waits whilst other voices continue".warn;
+		~othervoices1.wait;
 
 
+		"staring main voice again".warn;
+		5.do{ |count|
+			var delta = 3.0.rand + 3;
+			var step = Scale.major.semitones.choose;
+			var root = 65;
+			var freq = (step + root).midicps;
+
+			format("main voice at %", freq).postln;
+			Synth(\bleep, [\freq, freq, \rel, delta]);
+			if(count != 4, {delta.wait});
+		};
+
+		"staring other voices again".warn;
+		~othervoices2 = Barrier.doNTimes(20, { |n|
+			25.do{
+				var delta = 3.0.rand + 0.3;
+				var step = Scale.major.semitones.choose;
+				var root = 63;
+				var freq = (step + root).midicps;
+
+				format("other voice % at %", n, freq).postln;
+				Synth(\bleep, [
+					\freq, freq,
+					\atk, delta/2,
+					\rel, delta/2,
+					\amp, 0.05
+				]);
+				if(count != 24, {delta.wait});
+			}
+		});
+
+		"main voice does this while the other voices are playing".warn;
+		while({~othervoices2.isPlaying}, {
+			var delta = 3.0.rand + 3;
+			var step = Scale.major.semitones.choose;
+			var root = 40;
+			var freq = (step + root).midicps;
+			format("main voice at %", freq).postln;
+			Synth(\bleep, [
+				\freq, freq,
+				\rel, delta / 10,
+				\amp, 0.6
+			]);
+			delta.wait;
+		});
+
+		"done".warn;
+	}
+};
+)
+::
 
 
 

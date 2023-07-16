@@ -1,7 +1,7 @@
 Barrier {
 	var countDown;
 	var condVar;
-	var isFinished;
+	var <isFinished;
 
 	// only used for collect case
 	var expects_value;
@@ -33,14 +33,7 @@ Barrier {
 
 	*collectNTimes { |n, function| ^Barrier.collect(*{function}.dup(n)) }
 
-	wait {
-		expects_value.not.if(
-			{ this.prTryWait() },
-			{ ("Barrier.collect(N) returns a value, "
-				+ "call 'value' instead, or use Barrier.do(N) "
-				+ "when no value is needed").error }
-		)
-	}
+	wait { this.prTryWait() }
 
 	value {
 		^expects_value.not.if(
@@ -49,10 +42,12 @@ Barrier {
 		)
 	}
 
+
 	loopWhileExecuting {|func|
-		while({isFinished.not}, func);
+		fork{ while({isFinished.not}, func) };
 		^this;
 	}
+
 
 	// private:
 	prTryWait {
@@ -105,7 +100,6 @@ Barrier {
 		^this
 	}
 }
-
 
 
 

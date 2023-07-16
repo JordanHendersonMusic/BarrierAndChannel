@@ -3,16 +3,18 @@ summary:: A synchronisation barrier. Will wait until n number of threads have fi
 categories:: Scheduling
 related:: Classes/Channel
 
+
 DESCRIPTION::
 An synchronisation barrier.
 Evaluates many threads in parralel, will wait for all to be finished.
 Barriers are not reuseable.
 
-SECTION:: Usage
 
+SECTION:: Usage
 There are two ways to use Barrier that can be understood by asking two questions,
 do you want to compute a value or do something?
 and do you have many functions, or one function you want to evaluate many times?
+
 
 SUBSECTION:: With or without return value
 By using 'collect', 'b.value' will become an array of 4 random numbers between 0 and 1.
@@ -31,6 +33,8 @@ r = Routine.run {
 ::
 Whereas, when using 'do', the output is ignored.
 This particularly useful if you want to spawn a bunch of independed voices in polyphony and wait until all are finished.
+
+
 code::
 r = Routine.run {
 	var b  = Barrier.do(
@@ -45,9 +49,11 @@ r = Routine.run {
 }
 ::
 
+
 NOTE::
 Please note, that 'collect' is followed by a call to '.value', and 'do' is followed by '.wait'.
 ::
+
 
 SUBSECTION:: Single function, or repeat
 Both 'collect' and 'do' can have variants called 'collectNTimes' and 'doNTimes'.
@@ -76,6 +82,7 @@ r = Routine.run {
 
 
 CLASSMETHODS::
+
 
 METHOD::do
 
@@ -110,7 +117,7 @@ Return value added to an array.
 
 INSTANCEMETHODS::
 METHOD:: wait
-Only works on a 'do' Barrier. Will wait for the threads to finish
+Waits for the threads to finish
 
 METHOD:: value
 Only works on a 'collect' Barrier. Will wait for the threads to finish and return the value.
@@ -120,114 +127,132 @@ If the value has been completed, it will always return.
 
 METHOD:: loopWhileExecuting
 ARGUMENT:: func
-Loops this function while the process is still executing.
-The function is run in the current thread.
+discussion::
+Loops the passed in function while the Barrier is still executing. Does so in a seperate thread so wait/value must still be called.
+Returns the Barrier.
+
 NOTE::
 The passed function MUST wait, or it will be called very quickly, crashing the interpreter.
 There is no  way for Barrier to check this for you.
 ::
-EXAMPLES::
 
+
+METHOD:: isFinished
+Returns a boolean.
+
+
+
+EXAMPLES::
 Below is an interactive example. Run it while reading the code and following the post window.
 In short, the main voice plays 5 notes, then 10 other voices play while the main voice is quite,
 then the main voice plays 5 more notes, then while 20 other voices play, the main voice also plays something.
 
 code::
-(
+( // eval whole block - sound
 s.waitForBoot {
-
 	SynthDef(\bleep, {
 		var env = Env.perc(\atk.kr(0.01), \rel.kr(1)).ar(doneAction: 2);
-		var sig = SinOsc.ar(\freq.kr(220));
+		var sig = SinOsc.ar(Vibrato.kr(\freq.kr(220), depth: 0.01, delay: \rel.kr / 3));
 		var stereo = Pan2.ar(sig, Rand(-1.0, 1.0)) * env * \amp.kr(0.2);
 		Out.ar(\out.kr(0), stereo);
 	}).add;
 
 	s.sync;
-	s.scope;
 
 	Routine.run {
+		var randMajorPitch = {|root|
+			(Scale.major.semitones.choose + root).midicps
+		};
+
 		"staring main voice".warn;
+
 		5.do{ |count|
 			var delta = 3.0.rand + 0.1;
-			var step = Scale.major.semitones.choose;
-			var root = 60;
-			var freq = (step + root).midicps;
 
-			format("main voice at %", freq).postln;
-			Synth(\bleep, [\freq, freq, \rel, delta]);
-			if(count != 4, {delta.wait});
+			"main voice".postln;
+			Synth(\bleep, [\freq, randMajorPitch.(60), \rel, delta]);
+			// wait less on last note
+			if(count != 4, {delta.wait}, {(delta/4).wait});
 		};
 
-		"staring other voices".warn;
-		~othervoices1 = Barrier.doNTimes(10, {|n|
+		"staring 10 other voices".warn;
+
+		Barrier.doNTimes(10, { |n|
 			5.do{ |count|
 				var delta = 6.0.rand + 3;
-				var step = Scale.major.semitones.choose;
-				var root = 55;
-				var freq = (step + root).midicps;
 
-				format("other voice % at %", n, freq).postln;
+				format("other voice %", n).postln;
 				Synth(\bleep, [
-					\freq, freq,
-					\atk, delta/2,
-					\rel, delta/2,
-					\amp, 0.1
-				]);
-				// do not wait for last note to finish.
-				if(count != 4, {delta.wait});
-			}
-		});
-
-		"main voice waits whilst other voices continue".warn;
-		~othervoices1.wait;
-
-
-		"staring main voice again".warn;
-		5.do{ |count|
-			var delta = 3.0.rand + 3;
-			var step = Scale.major.semitones.choose;
-			var root = 65;
-			var freq = (step + root).midicps;
-
-			format("main voice at %", freq).postln;
-			Synth(\bleep, [\freq, freq, \rel, delta * 3]);
-			if(count != 4, {delta.wait});
-		};
-
-		"staring other voices again".warn;
-		"but main voice does something while the other voices are playing".warn;
-		Barrier.doNTimes(20, { |n|
-			25.do{ |count|
-				var delta = 3.0.rand + 0.3;
-				var step = Scale.major.semitones.choose;
-				var root = 63;
-				var freq = (step + root).midicps;
-
-				format("other voice % at %", n, freq).postln;
-				Synth(\bleep, [
-					\freq, freq,
+					\freq, randMajorPitch.(55),
 					\atk, delta/2,
 					\rel, delta/2,
 					\amp, 0.05
 				]);
-				if(count != 24, {delta.wait});
+				// wait less on last note
+				if(count != 4, {delta.wait}, {(delta/4).wait});
 			}
 		})
+		.wait; // main voice (this thread) waits here.
+
+
+		"staring main voice again".warn;
+
+
+		5.do{ |count|
+			var delta = 3.0.rand + 3;
+
+			"main voice".postln;
+			Synth(\bleep, [\freq, randMajorPitch.(65), \rel, delta * 3]);
+			// wait less on last note
+			if(count != 4, {delta.wait}, {(delta/4).wait});
+		};
+
+
+
+		"staring other voices again".warn;
+		"but two other voices join, playing for as long as the barrier plays".warn;
+
+		Barrier.doNTimes(20, { |n|
+			25.do{ |count|
+				var delta = 3.0.rand + 0.3;
+
+				format("other voice: % count: %", n, count).postln;
+				Synth(\bleep, [
+					\freq, randMajorPitch.(63),
+					\atk, delta/2,
+					\rel, delta/2,
+					\amp, 0.05
+				]);
+
+				delta.wait
+			}
+		})
+
+		// runs for as long as the main barrier is processing, see help docs for note
 		.loopWhileExecuting({
-			// makes low thumps
-			var delta = 3.0.rand + 1;
-			var step = Scale.major.semitones.choose;
-			var root = 40;
-			var freq = (step + root).midicps;
-			format("main voice at %", freq).postln;
+			var delta = 1.0.rand + 0.2;
+			"high pitched voice".postln;
 			Synth(\bleep, [
-				\freq, freq,
+				\freq, randMajorPitch.(87),
+				\atk, delta * 0.9,
+				\rel, delta * 0.1,
+				\amp, 0.2
+			]);
+			(delta * (1 + 2.0.rand)).wait;
+		})
+
+		.loopWhileExecuting({
+			var delta = 3.0.rand + 1;
+			"low thumps voice".postln;
+			Synth(\bleep, [
+				\freq, randMajorPitch.(40),
 				\rel, delta / 10,
 				\amp, 0.6
 			]);
 			delta.wait;
-		});
+		})
+
+		.wait;
 
 		"done".warn;
 	}

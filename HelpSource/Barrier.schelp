@@ -1,58 +1,127 @@
 CLASS:: Barrier
-summary:: A synchronisation barrier. Will will wait until n number of threads have finished.
+summary:: A synchronisation barrier. Will wait until n number of threads have finished.
 categories:: Scheduling
 related:: Classes/CondVar
 
 DESCRIPTION::
-An synchronisation barrier. Will will wait until n number of threads have finished.
+An synchronisation barrier.
+Evaluates many threads in parralel, will wait for all to be finished.
 Barriers are not reuseable.
 
 SECTION:: Usage
 
-There are two ways to use Barrier, forkAll, or forkN.
+There are two ways to use Barrier that can be understood by asking two questions,
+do you want to compute a value or do something?
+and do you have many functions, or one function you want to evaluate many times?
+
+SUBSECTION:: With or without return value
+By using 'collect', 'b.value' will become an array of 4 random numbers between 0 and 1.
+code::
+r = Routine.run {
+	var b  = Barrier.collect(
+		{ var v = 1.0.rand; v.wait; v},
+		{ var v = 1.0.rand; v.wait; v},
+		{ var v = 1.0.rand; v.wait; v},
+		{ var v = 1.0.rand; v.wait; v}
+	);
+	\waiting.postln;
+	b.value.postln;
+	\done.postln;
+}
+::
+Whereas, when using 'do', the output is ignored.
+This particularly useful if you want to spawn a bunch of independed voices in polyphony and wait until all are finished.
+code::
+r = Routine.run {
+	var b  = Barrier.do(
+		{ var v = 1.0.rand; v.wait; v.postln},
+		{ var v = 1.0.rand; v.wait; v.postln},
+		{ var v = 1.0.rand; v.wait; v.postln},
+		{ var v = 1.0.rand; v.wait; v.postln}
+	);
+	\waiting.postln;
+	b.wait;
+	\done.postln;
+}
+::
+
+NOTE::
+Please note, that 'collect' is followed by a call to '.value', and 'do' is followed by '.wait'.
+::
+
+SUBSECTION:: Single function, or repeat
+Both 'collect' and 'do' can have variants called 'collectNTimes' and 'doNTimes'.
+They repeat the given function 'N' times.
 
 code::
-r = Routine {
-	var barrier = Barrier.forkAll(
-		{1.0.rand.wait; \a.postln},
-		{1.0.rand.wait; \b.postln},
-		{1.0.rand.wait; \c.postln},
-		{1.0.rand.wait; \d.postln}
+r = Routine.run {
+	var b  = Barrier.doNTimes(10,
+		{ var v = 1.0.rand; v.wait; v.postln}
 	);
-
 	\waiting.postln;
-	barrier.wait;
-	\done.postln
+	var b.wait;
+	\done.postln;
 };
 
-r.play;
-
-r = Routine {
-	var func = {|n| 1.0.rand.wait; n.postln};
-	var barrier = Barrier.forkN(f, 10 );
-
+r = Routine.run {
+	var b = Barrier.collectNTimes(4,
+		{ var v = 1.0.rand; v.wait; v}
+	);
 	\waiting.postln;
-	barrier.wait;
-	\done.postln
+	b.value.postln;
+	\done.postln;
 };
-
-r.play
 ::
+
 
 
 CLASSMETHODS::
 
-METHOD::forkAll
+METHOD::do
 
-argument:: ...arrayOfFuncs
-An series of functions to run.
-One function per argument.
+argument:: ...seriesOfFuncs
+A series of functions to run.
+Ignores return value.
+Functions are passed the thread number as the first argument.
 
 
-METHOD::forkN
-argument:: func
-A function that will be duplicated and run in parralel N times.
-Recieves the instance count as the function argument.
+METHOD::collect
+argument:: ...seriesOfFuncs
+A series of functions to run.
+Each function's return value is added to an array, accessable with '.value'.
+Functions are passed the thread number as the first argument.
 
+
+METHOD::doNTimes
 argument:: n
 The number of times to duplicate the function.
+argument:: function
+A function to do evaluate n times, is passed n as an argument.
+Return value is ignored.
+
+
+METHOD::collectNTimes
+argument:: n
+The number of times to duplicate the function.
+argument:: function
+A function to do evaluate n times, is passed n as an argument.
+Return value added to an array.
+
+
+INSTANCEMETHODS::
+METHOD:: wait
+Only works on a 'do' Barrier. Will wait for the threads to finish
+
+METHOD:: value
+Only works on a 'collect' Barrier. Will wait for the threads to finish and return the value.
+If this isn't called in a thread, and the value has not been completed then an error will be thrown.
+If the value has been completed, it will always return.
+
+
+
+
+
+
+
+
+

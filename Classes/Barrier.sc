@@ -42,9 +42,29 @@ Barrier {
 		)
 	}
 
-
 	loopWhileExecuting {|func|
-		fork{ while({isFinished.not}, func) };
+		var count = 0;
+		var should_loop = true;
+
+		fork{
+			while
+			{isFinished.not && should_loop}
+			{
+				var wait_time = func.(count, this);
+				if( wait_time.isKindOf(Number),
+					{ wait_time.wait },
+					{
+						should_loop = false;
+						format(
+							"loopWhileExecuting's function MUST return a number that will be 'waited' "
+							+ "before the function is called again, expected Number, received %",
+							wait_time.class
+						).err;
+					}
+				);
+				count = count + 1;
+			}
+		};
 		^this;
 	}
 

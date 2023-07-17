@@ -128,12 +128,13 @@ If the value has been completed, it will always return.
 METHOD:: loopWhileExecuting
 ARGUMENT:: func
 discussion::
-Loops the passed in function while the Barrier is still executing. Does so in a seperate thread so wait/value must still be called.
-Returns the Barrier.
+Loops the passed in function while the Barrier is still executing. Does so in a seperate thread so wait/value must still be called. Returns the Barrier.
+
+'func' MUST return a number which will be the time between 'func' calls.
+'func' is passed the number of times it has been run, and the Barrier as its arguments
 
 NOTE::
-The passed function MUST wait, or it will be called very quickly, crashing the interpreter.
-There is no  way for Barrier to check this for you.
+If this function returns '0' repeatedly, the server and/or interpreter might crash.
 ::
 
 
@@ -238,7 +239,8 @@ s.waitForBoot {
 				\rel, delta * 0.1,
 				\amp, 0.2
 			]);
-			(delta * (1 + 2.0.rand)).wait;
+
+			delta * (1 + 2.0.rand) // the wait time
 		})
 
 		.loopWhileExecuting({
@@ -249,7 +251,8 @@ s.waitForBoot {
 				\rel, delta / 10,
 				\amp, 0.6
 			]);
-			delta.wait;
+
+			delta // the wait time
 		})
 
 		.wait;

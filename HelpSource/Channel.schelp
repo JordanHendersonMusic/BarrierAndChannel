@@ -58,10 +58,8 @@ ARGUMENT:: ...v
 
 METHOD:: insertResultOf
 Insert the result of the function into the channel.
-The function may 'wait' or otherwise halt the execution.
+The function is forked and so may wait.
 ARGUMENT:: function
-
-INSTANCEMETHODS::
 
 
 METHOD:: extract

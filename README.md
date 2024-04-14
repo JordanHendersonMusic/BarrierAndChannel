@@ -8,31 +8,17 @@ Channel deals with consumers and produces.
 
 
 ```Supercollider
-r = Routine {
-	var barrier = Barrier.forkAll(
-		{1.0.rand.wait; \a.postln},
-		{1.0.rand.wait; \b.postln},
-		{1.0.rand.wait; \c.postln},
-		{1.0.rand.wait; \d.postln}
+r = Routine.run {
+	var b  = Barrier.collect(
+		{ var v = 1.0.rand; v.wait; v},
+		{ var v = 1.0.rand; v.wait; v},
+		{ var v = 1.0.rand; v.wait; v},
+		{ var v = 1.0.rand; v.wait; v}
 	);
-
 	\waiting.postln;
-	barrier.wait;
-	\done.postln
-};
-
-r.play;
-
-r = Routine {
-	var func = {|n| 1.0.rand.wait; n.postln};
-	var barrier = Barrier.forkN(f, 10 );
-
-	\waiting.postln;
-	barrier.wait;
-	\done.postln
-};
-
-r.play
+	b.value.postln;
+	\done.postln;
+}
 ```
 
 ```Supercollider

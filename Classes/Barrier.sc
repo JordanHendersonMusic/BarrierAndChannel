@@ -41,6 +41,7 @@ Barrier {
 			{ this.prTryValue()	}
 		)
 	}
+	await { ^this.value }
 
 	loopWhileExecuting {|func|
 		var count = 0;
@@ -120,26 +121,3 @@ Barrier {
 		^this
 	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

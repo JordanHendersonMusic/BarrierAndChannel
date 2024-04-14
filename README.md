@@ -1,6 +1,10 @@
 # A Supercollider Quark
 
-A synchronisation barrier. Will will wait until n number of threads have finished.
+A thread synchronisation barrier and a channel.
+
+Barrier will wait until n number of threads have finished.
+
+Channel deals with consumers and produces.
 
 
 ```Supercollider
@@ -29,4 +33,16 @@ r = Routine {
 };
 
 r.play
+```
+
+```Supercollider
+~ch = Channel();
+
+fork { loop {
+  var t = 1.0.rand;
+  t.wait;
+  ~ch.push(t);
+}};
+
+fork { loop { ~ch.pop().debug(\got) }};
 ```

@@ -1,7 +1,6 @@
 CLASS:: Barrier
 summary:: A synchronisation barrier. Will wait until n number of threads have finished.
 categories:: Scheduling
-related:: Classes/Channel
 
 
 DESCRIPTION::

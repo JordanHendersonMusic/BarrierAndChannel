@@ -1,78 +1,270 @@
 CLASS:: Channel
-summary:: A synchronisation method with two ends, an insert and extract.
+summary:: A synchronisation pipeline with two ends.
 categories:: Scheduling
-related:: Classes/Barrier
 
 DESCRIPTION::
 An synchronisation channel.
-There are two ends to a channel, an insertion end, and an extraction end.
+There are two ends to a channel, an insertion end (push), and an extraction end (pop).
 This is used to have some number of threads producing values, and some number consuming values.
 The values are extracted in the order they were inserted, so the oldest value is extracted first.
 
 SECTION:: Usage
-Channel has very few methods. 'insert' and 'extract' are the most important.
-Below, '~inserter' is creating values  and '~extractor' is extracting them.
+
+SUBSECTION:: Simple
 
 code::
-~channel = Channel();
+~ch = Channel();
 
-~inserter = Routine.run{
-	loop  {
-		var r = 5.0.rand;
-		r.wait;
-		\inserting.postln;
-		~channel.insert( r );
-	}
+// this routine makes values
+fork { loop {
+  var t = 1.0.rand;
+  t.wait;
+  ~ch.push(t);
+}};
+
+
+// this routine receives values
+fork { loop {
+  ~ch.pop().debug(\got)
+}};
+::
+
+'Popping' must always occur in a channel, see link::#-spillDo:: for a synchronous version.
+
+
+SUBSECTION::Multiple Values
+
+code::
+~ch = Channel();
+
+fork { loop {
+  var t = 1.0.rand;
+  t.wait;
+  ~ch.push(t);
+}};
+
+// returns as array of 5 values
+fork { loop {
+  ~ch.pop(5, timeout: 6).debug(\gotAnArray)
+}};
+::
+
+SUBSECTION::Closing Channels
+
+Channels may be closed, meaning it is no longer possible to push values to them.
+This may only happen at the push site (for now).
+
+code::
+~ch = Channel();
+
+fork {
+  ~ch.doUntilClosed(_.debug(\got));
+  \channelClosed.postln
 };
 
-~extractor = Routine.run {
-	loop {
-		\waiting.postln;
-		2.wait;
-		~channel.extract.postln;
-	}
-};
+// push, closing the channel
+~ch.push(1.0.rand, close: true);
+
+
+// error, cannot push to closed channel
+~ch.push(1.0.rand, close: true);
 ::
 
 
-Alternatively, '~extract' may '.extractAll', which returns an array of values.
-Or may wish to check whether the channel '.has_value' and do something if not.
+SUBSECTION::Popping a range of values
 
+code::
+~ch = Channel();
+
+fork { loop {
+  var t = 1.0.rand;
+  t.wait;
+  // push a random number of 't's.
+  (5 + 1).rand.do { ~ch.push(t) }
+}};
+
+
+fork { loop {
+  // pops more than 5 items
+  ~ch.pop(5, mode: Channel.moreThan).debug(\got)
+}};
+
+
+fork { loop {
+  // pops as many items as possible, but less than 5
+  ~ch.pop(5, mode: Channel.lessThan).debug(\got)
+}};
+::
+
+
+Pop will return an array of values, unless the count is 1 and the mode is set to exactly (which is the default).
+
+
+SUBSECTION::Multiple pops
+
+Having multiple consumers is supported, 
+although care needs to be taken when different pop counts are used,
+as it might be possible for one popper to always receive the value.
+
+
+By default, this is not an issue as the popping threads will strictly alternate depending on the order they were created
+
+code::
+~ch = Channel();
+
+fork { loop {
+  var t = 0.5.rand;
+  t.wait;
+  ~ch.push(t);
+}};
+
+fork { loop { ~ch.pop().debug(\A) }};
+fork { loop { ~ch.pop().debug(\B) }};
+::
+
+This is true even when one of the threads could accept the value.
+Poppers, by default, are well mannered and queue.
+
+This code will alternate between A and B.
+code::
+~ch = Channel();
+
+fork { loop {
+  var t = 0.5.rand;
+  t.wait;
+  ~ch.push(t);
+}};
+
+fork { loop { ~ch.pop().debug(\A) }};
+fork { loop { ~ch.pop(5).debug(\B) }};
+::
+
+
+Poppers can be made greedy.
+
+Here, A, will always win and B will throw a timeout error.
+code::
+
+fork { loop {
+  var t = 0.5.rand;
+  t.wait;
+  ~ch.push(t);
+}};
+
+fork { loop { ~ch.pop(isGreedy: true).debug(\A) }};
+fork { loop { ~ch.pop(5).debug(\B) }};
+::
+
+Multiple greedy poppers will queue and alternate.
+code::
+~ch = Channel();
+
+fork { loop {
+	var t = 0.5.rand;
+	t.wait;
+	~ch.push(t);
+}};
+
+fork { loop { ~ch.pop(isGreedy: true).debug(\A) }};
+fork { loop{ ~ch.pop(isGreedy: true).debug(\B) }};
+::
+
+A more reasonable use of greedy poppers.
+code::
+~ch = Channel();
+
+fork { loop {
+	var t = 0.5.rand;
+	t.wait;
+	~ch.push(t);
+}};
+
+fork { loop { ~ch.pop().debug(\polite) }};
+fork { 10.do { ~ch.pop(isGreedy: true).debug(\greedy) }};
+::
 
 
 CLASSMETHODS::
 
 METHOD::new
-Channel must be made and shared between Routines.
 
+METHOD::exactly
+Controls what the pop count means. Will pop exactly the count size.
+METHOD::moreThan
+Controls what the pop count means. Will pop more than the count size.
+METHOD::lessThan
+Controls what the pop count means. Will pop less than the count size.
 
 INSTANCEMETHODS::
-METHOD:: insert
-Insert value into the channel.
-ARGUMENT:: v
+
+METHOD::push
+Insert values into the channel.
+argument:: value
+The value to push.
+argument:: close
+A link::Classes/Boolean:: indicating whether the channel should be closed after inserting.
+
+METHOD::pop
+Remove values from the channel.
+argument:: count
+The number of items to remove.
+argument:: timeout
+The time to wait (in seconds) before giving up. Throws an error after the time has elapsed.
+Defaults to 10.
+argument:: mode
+Controls how the count argument is interpreted.
+Either Channel.exactly, Channel.moreThan or Channel.lessThan.
+Defaults to Channel.exactly.
+
+argument:: isGreedy
+A link::Classes/Boolean:: indicating whether the poppers is greedy and jumps to the front of the queue.
+
+returns::
+If the count is 1 and the mode Channel.exactly, then the single item is returned.
+For all other cases, an array of items is returned.
+
+METHOD::doUntilClosed
+argument:: f
+A link::Classes/Function:: accepting a single item.
+Its return is discarded.
+argument:: timeout
+The time to wait (in seconds) before giving up. Throws an error after the time has elapsed if the channel has not been closed.
 
 
-METHOD:: insertAll
-Inserts all value into the channel, seperate each value with a comma.
-ARGUMENT:: ...v
+METHOD::close
+Closes channel.
 
-METHOD:: insertResultOf
-Insert the result of the function into the channel.
-The function is forked and so may wait.
-ARGUMENT:: function
+METHOD::holds
+returns::The number of items inside the channel.
 
+METHOD::empty
+returns::A link::Classes/Boolean::
 
-METHOD:: extract
-Extracts the oldest value from the Channel
+METHOD::spillDo
+Consumes all the items inside the channel synchronously.
+Spilling is always greedy.
+argument::f 
+A link::Classes/Function:: accepting the item to be consumed.
 
-METHOD:: extractAll
-Extracts all the values from the Channel, returning an array of values.
+METHOD::spillCollect
+Consumes all the items inside the channel synchronously.
+Spilling is always greedy.
+argument::f 
+A link::Classes/Function:: accepting the item to be consumed.
+returns:: An array of the result of calling the function on each item.
 
-METHOD:: has_value
-Returns true or false depending on whether a value may be extracted.
+code::
+~ch = Channel();
 
+fork { loop {
+	var t = 0.5.rand;
+	t.wait;
+	~ch.push(t);
+}};
 
+fork { loop { ~ch.pop(5).debug(\A) }};
 
-
-
+// run this occasionally
+~ch.spillCollect({|v| v })
+::
 

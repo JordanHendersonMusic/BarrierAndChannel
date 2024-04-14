@@ -1,5 +1,5 @@
 (
- \name: "Barrier",
+ \name: "BarrierAndChannel",
  \summary: "An synchronisation Barrier and a Channel. Barrier will wait until n number of threads have finished, Channel is used for cross routine communication.",
  \author: "Jordan Henderson",
  \copyright: "Jordan Henderson 2023",
